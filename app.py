@@ -9,7 +9,9 @@ import logging
 import os
 from contextlib import asynccontextmanager
 from database import init_db
-from routes import strategies, signals, websocket
+from routes.strategies import router as strategies_router
+from routes.signals import router as signals_router
+from routes.websocket import router as websocket_router
 import redis
 import json
 
@@ -58,9 +60,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # Include routers
-app.include_router(strategies.router, prefix="/api/strategies", tags=["strategies"])
-app.include_router(signals.router, prefix="/api/signals", tags=["signals"])
-app.include_router(websocket.router, prefix="/ws", tags=["websocket"])
+app.include_router(strategies_router, prefix="/api/strategies", tags=["strategies"])
+app.include_router(signals_router, prefix="/api/signals", tags=["signals"])
+app.include_router(websocket_router, prefix="/ws", tags=["websocket"])
 
 # Root route
 @app.get("/", response_class=HTMLResponse)

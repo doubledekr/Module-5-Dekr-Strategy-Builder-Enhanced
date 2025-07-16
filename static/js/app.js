@@ -119,8 +119,15 @@ class DekrApp {
 
     // WebSocket Methods
     setupWebSockets() {
-        this.connectSignalSocket();
-        this.connectMarketSocket();
+        // Temporarily disable WebSocket connections until Flask-SocketIO is implemented
+        console.log('WebSocket functionality disabled - using polling instead');
+        this.updateConnectionStatus('signals', false);
+        this.updateConnectionStatus('market', false);
+        
+        // Set up periodic polling for signals instead
+        setInterval(() => {
+            this.loadSignals();
+        }, 10000); // Poll every 10 seconds
     }
 
     connectSignalSocket() {
