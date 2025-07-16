@@ -173,6 +173,34 @@ class TechnicalAnalysisEngine:
                     if 'sma_50' not in df.columns:
                         df = self.calculate_indicators(df, ['sma'])
                     comparison_series = df['sma_50'] if 'sma_50' in df.columns else df['close']
+                elif value == "signal" or value == "macd_signal" or value == "signal_line":
+                    # Handle MACD signal line comparison
+                    if 'macd_signal' not in df.columns:
+                        df = self.calculate_indicators(df, ['macd'])
+                    comparison_series = df['macd_signal'] if 'macd_signal' in df.columns else pd.Series([0] * len(df), index=df.index)
+                elif value == "histogram" or value == "macd_histogram":
+                    # Handle MACD histogram comparison  
+                    if 'macd_histogram' not in df.columns:
+                        df = self.calculate_indicators(df, ['macd'])
+                    comparison_series = df['macd_histogram'] if 'macd_histogram' in df.columns else pd.Series([0] * len(df), index=df.index)
+                elif value == "bb_upper" or value == "upper_band":
+                    # Handle Bollinger Band upper band comparison
+                    if 'bb_upper' not in df.columns:
+                        df = self.calculate_indicators(df, ['bollinger'])
+                    comparison_series = df['bb_upper'] if 'bb_upper' in df.columns else df['close']
+                elif value == "bb_lower" or value == "lower_band":
+                    # Handle Bollinger Band lower band comparison
+                    if 'bb_lower' not in df.columns:
+                        df = self.calculate_indicators(df, ['bollinger'])
+                    comparison_series = df['bb_lower'] if 'bb_lower' in df.columns else df['close']
+                elif value == "bb_middle" or value == "middle_band":
+                    # Handle Bollinger Band middle band comparison
+                    if 'bb_middle' not in df.columns:
+                        df = self.calculate_indicators(df, ['bollinger'])
+                    comparison_series = df['bb_middle'] if 'bb_middle' in df.columns else df['close']
+                elif value == "zero" or value == "0":
+                    # Handle zero line crossovers
+                    value = 0
                 else:
                     # Try to convert string to float
                     try:
