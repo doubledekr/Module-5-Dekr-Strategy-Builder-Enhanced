@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dekr Strategy Builder Enhanced</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', path='/css/custom.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i data-feather="trending-up" class="me-2"></i>
+                Dekr Strategy Builder
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/">
+                            <i data-feather="home" class="me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/strategy-builder">
+                            <i data-feather="plus-circle" class="me-1"></i>Create Strategy
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/backtesting">
+                            <i data-feather="bar-chart-2" class="me-1"></i>Backtesting
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/signals">
+                            <i data-feather="activity" class="me-1"></i>Signals
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mt-4">
+        <!-- Status Bar -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-0">Connection Status</h6>
+                                <div class="mt-2">
+                                    <div id="signals-status" class="real-time-indicator text-secondary mb-1">
+                                        <span class="real-time-dot bg-secondary"></span>
+                                        Connecting...
+                                    </div>
+                                    <div id="market-status" class="small text-muted">
+                                        <span class="badge bg-secondary">Market Status Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <i data-feather="wifi" style="width: 32px; height: 32px; color: #6c757d;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="card-title mb-0">Account Tier</h6>
+                                <p class="card-text mb-0">Sector Specialist</p>
+                                <small class="text-muted">Full strategy access</small>
+                            </div>
+                            <i data-feather="award" style="width: 32px; height: 32px; color: #ffc107;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Statistics -->
+        <div class="row mb-4" id="dashboard-stats">
+            <!-- Stats will be populated by JavaScript -->
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Quick Actions</h5>
+                        <div class="row">
+                            <div class="col-md-3 mb-3">
+                                <a href="/strategy-builder" class="btn btn-primary w-100">
+                                    <i data-feather="plus-circle" class="me-2"></i>
+                                    Create Strategy
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <a href="/backtesting" class="btn btn-secondary w-100">
+                                    <i data-feather="bar-chart-2" class="me-2"></i>
+                                    Run Backtest
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <a href="/signals" class="btn btn-info w-100">
+                                    <i data-feather="activity" class="me-2"></i>
+                                    View Signals
+                                </a>
+                            </div>
+                            <div class="col-md-3 mb-3">
+                                <button class="btn btn-outline-secondary w-100" onclick="dekr.loadStrategies(); dekr.loadSignals();">
+                                    <i data-feather="refresh-cw" class="me-2"></i>
+                                    Refresh Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Signals -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Recent Signals</h5>
+                        <a href="/signals" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="recent-signals">
+                            <!-- Recent signals will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Strategies -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Your Strategies</h5>
+                        <a href="/strategy-builder" class="btn btn-sm btn-primary">
+                            <i data-feather="plus" class="me-1"></i>New Strategy
+                        </a>
+                    </div>
+                    <div class="card-body">
+                        <div class="row" id="strategies-container">
+                            <!-- Strategies will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Performance Overview -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Signal Distribution</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="signalChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Strategy Performance</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Notifications Container -->
+    <div id="notifications" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', path='/js/app.js') }}"></script>
+
+    <script>
+        // Initialize dashboard-specific functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            // Create initial charts
+            setTimeout(() => {
+                if (dekr && dekr.signals.length > 0) {
+                    createSignalChart();
+                    createPerformanceChart();
+                }
+            }, 1000);
+        });
+
+        function createSignalChart() {
+            const signalTypes = {};
+            dekr.signals.forEach(signal => {
+                signalTypes[signal.signal_type] = (signalTypes[signal.signal_type] || 0) + 1;
+            });
+
+            const data = {
+                labels: Object.keys(signalTypes),
+                datasets: [{
+                    data: Object.values(signalTypes),
+                    backgroundColor: [
+                        '#28a745',
+                        '#dc3545',
+                        '#ffc107',
+                        '#17a2b8'
+                    ]
+                }]
+            };
+
+            dekr.createChart('signalChart', 'doughnut', data, {
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            });
+        }
+
+        function createPerformanceChart() {
+            const data = {
+                labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                datasets: [{
+                    label: 'Strategy Performance',
+                    data: [12, 19, 3, 5, 2, 3],
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    tension: 0.1
+                }]
+            };
+
+            dekr.createChart('performanceChart', 'line', data, {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

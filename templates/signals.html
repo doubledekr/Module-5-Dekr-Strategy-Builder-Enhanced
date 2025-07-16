@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signals - Dekr Strategy Builder Enhanced</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    
+    <!-- Feather Icons -->
+    <script src="https://unpkg.com/feather-icons"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Custom CSS -->
+    <link href="{{ url_for('static', path='/css/custom.css') }}" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i data-feather="trending-up" class="me-2"></i>
+                Dekr Strategy Builder
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i data-feather="home" class="me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/strategy-builder">
+                            <i data-feather="plus-circle" class="me-1"></i>Create Strategy
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/backtesting">
+                            <i data-feather="bar-chart-2" class="me-1"></i>Backtesting
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/signals">
+                            <i data-feather="activity" class="me-1"></i>Signals
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="container mt-4">
+        <!-- Header -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h2>Real-Time Signals</h2>
+                        <p class="text-muted">Monitor live trading signals from your active strategies</p>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div id="signals-status" class="real-time-indicator text-secondary me-3">
+                            <span class="real-time-dot bg-secondary"></span>
+                            Connecting...
+                        </div>
+                        <button class="btn btn-outline-primary" onclick="refreshSignals()">
+                            <i data-feather="refresh-cw" class="me-1"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signal Statistics -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i data-feather="activity" class="mb-2" style="width: 32px; height: 32px; color: #007bff;"></i>
+                        <h5 class="card-title" id="total-signals">0</h5>
+                        <p class="card-text text-muted">Total Signals</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i data-feather="arrow-up" class="mb-2" style="width: 32px; height: 32px; color: #28a745;"></i>
+                        <h5 class="card-title" id="buy-signals">0</h5>
+                        <p class="card-text text-muted">Buy Signals</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i data-feather="arrow-down" class="mb-2" style="width: 32px; height: 32px; color: #dc3545;"></i>
+                        <h5 class="card-title" id="sell-signals">0</h5>
+                        <p class="card-text text-muted">Sell Signals</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <i data-feather="trending-up" class="mb-2" style="width: 32px; height: 32px; color: #ffc107;"></i>
+                        <h5 class="card-title" id="avg-confidence">0%</h5>
+                        <p class="card-text text-muted">Avg Confidence</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <form class="row g-3">
+                            <div class="col-md-3">
+                                <label for="strategy-filter" class="form-label">Strategy</label>
+                                <select class="form-select" id="strategy-filter">
+                                    <option value="">All Strategies</option>
+                                    <!-- Options will be populated by JavaScript -->
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="symbol-filter" class="form-label">Symbol</label>
+                                <input type="text" class="form-control" id="symbol-filter" placeholder="AAPL">
+                            </div>
+                            <div class="col-md-3">
+                                <label for="signal-type-filter" class="form-label">Signal Type</label>
+                                <select class="form-select" id="signal-type-filter">
+                                    <option value="">All Types</option>
+                                    <option value="buy">Buy</option>
+                                    <option value="sell">Sell</option>
+                                    <option value="strong_buy">Strong Buy</option>
+                                    <option value="strong_sell">Strong Sell</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label for="confidence-filter" class="form-label">Min Confidence</label>
+                                <select class="form-select" id="confidence-filter">
+                                    <option value="">Any</option>
+                                    <option value="0.5">50%+</option>
+                                    <option value="0.7">70%+</option>
+                                    <option value="0.9">90%+</option>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signals Table -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0">Recent Signals</h5>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="auto-refresh" checked>
+                                <label class="form-check-label" for="auto-refresh">
+                                    Auto-refresh
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Symbol</th>
+                                        <th>Signal</th>
+                                        <th>Price</th>
+                                        <th>Confidence</th>
+                                        <th>Conditions</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="signals-table">
+                                    <!-- Signals will be populated by JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Signal Details Modal -->
+        <div class="modal fade" id="signalModal" tabindex="-1">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Signal Details</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body" id="signal-details">
+                        <!-- Details will be populated by JavaScript -->
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-primary" onclick="processSignal()">Mark as Processed</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Notifications Container -->
+    <div id="notifications" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script src="{{ url_for('static', path='/js/app.js') }}"></script>
+
+    <script>
+        let currentSignalId = null;
+        let signalUpdateInterval = null;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSignalFilters();
+            loadSignalStats();
+            loadSignalsTable();
+            
+            // Setup auto-refresh
+            setupAutoRefresh();
+            
+            // Setup filter event listeners
+            setupFilterListeners();
+        });
+
+        function loadSignalFilters() {
+            if (dekr && dekr.strategies) {
+                const strategyFilter = document.getElementById('strategy-filter');
+                strategyFilter.innerHTML = '<option value="">All Strategies</option>' +
+                    dekr.strategies.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+            }
+        }
+
+        async function loadSignalStats() {
+            try {
+                const response = await fetch('/api/signals/stats');
+                const data = await response.json();
+                
+                document.getElementById('total-signals').textContent = data.total_signals;
+                document.getElementById('buy-signals').textContent = data.buy_signals;
+                document.getElementById('sell-signals').textContent = data.sell_signals;
+                document.getElementById('avg-confidence').textContent = (data.avg_confidence * 100).toFixed(1) + '%';
+            } catch (error) {
+                console.error('Error loading signal stats:', error);
+            }
+        }
+
+        async function loadSignalsTable() {
+            try {
+                const response = await fetch('/api/signals/');
+                const data = await response.json();
+                
+                const tbody = document.getElementById('signals-table');
+                
+                if (data.signals && data.signals.length > 0) {
+                    tbody.innerHTML = data.signals.map(signal => `
+                        <tr>
+                            <td>${new Date(signal.timestamp).toLocaleString()}</td>
+                            <td><strong>${signal.symbol}</strong></td>
+                            <td>
+                                <span class="badge ${getSignalBadgeClass(signal.signal_type)}">
+                                    ${signal.signal_type.toUpperCase()}
+                                </span>
+                            </td>
+                            <td>${dekr.formatCurrency(signal.price)}</td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="confidence-meter me-2" style="width: 50px;">
+                                        <div class="confidence-fill" style="width: ${signal.confidence * 100}%"></div>
+                                    </div>
+                                    <span class="small">${(signal.confidence * 100).toFixed(1)}%</span>
+                                </div>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-info" onclick="showSignalDetails('${signal.id}')">
+                                    <i data-feather="info" class="me-1"></i>View
+                                </button>
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button class="btn btn-sm btn-outline-success" onclick="processSignal('${signal.id}')">
+                                        <i data-feather="check" class="me-1"></i>Process
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="ignoreSignal('${signal.id}')">
+                                        <i data-feather="x" class="me-1"></i>Ignore
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                } else {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i data-feather="activity" class="mb-2" style="width: 48px; height: 48px;"></i>
+                                <br>No signals found. Make sure you have active strategies.
+                            </td>
+                        </tr>
+                    `;
+                }
+                
+                feather.replace();
+            } catch (error) {
+                console.error('Error loading signals table:', error);
+            }
+        }
+
+        function getSignalBadgeClass(signalType) {
+            switch (signalType) {
+                case 'buy':
+                case 'strong_buy':
+                    return 'bg-success';
+                case 'sell':
+                case 'strong_sell':
+                    return 'bg-danger';
+                default:
+                    return 'bg-warning';
+            }
+        }
+
+        function showSignalDetails(signalId) {
+            // Find signal data
+            const signal = dekr.signals.find(s => s.id === signalId);
+            if (!signal) return;
+            
+            currentSignalId = signalId;
+            
+            const modalBody = document.getElementById('signal-details');
+            modalBody.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Signal Information</h6>
+                        <table class="table table-sm">
+                            <tr><td>Symbol:</td><td><strong>${signal.symbol}</strong></td></tr>
+                            <tr><td>Type:</td><td><span class="badge ${getSignalBadgeClass(signal.signal_type)}">${signal.signal_type.toUpperCase()}</span></td></tr>
+                            <tr><td>Price:</td><td>${dekr.formatCurrency(signal.price)}</td></tr>
+                            <tr><td>Confidence:</td><td>${(signal.confidence * 100).toFixed(1)}%</td></tr>
+                            <tr><td>Timestamp:</td><td>${new Date(signal.timestamp).toLocaleString()}</td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Market Data</h6>
+                        <table class="table table-sm">
+                            <tr><td>Current Price:</td><td>${dekr.formatCurrency(signal.market_data.current_price || 0)}</td></tr>
+                            <tr><td>Volume:</td><td>${(signal.market_data.volume || 0).toLocaleString()}</td></tr>
+                            <tr><td>RSI:</td><td>${(signal.market_data.rsi || 0).toFixed(2)}</td></tr>
+                            <tr><td>SMA 20:</td><td>${dekr.formatCurrency(signal.market_data.sma_20 || 0)}</td></tr>
+                        </table>
+                    </div>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6>Conditions Met</h6>
+                        <ul class="list-group">
+                            ${signal.conditions_met.map(condition => `
+                                <li class="list-group-item">${condition}</li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                </div>
+            `;
+            
+            const modal = new bootstrap.Modal(document.getElementById('signalModal'));
+            modal.show();
+        }
+
+        async function processSignal(signalId) {
+            try {
+                const response = await fetch(`/api/signals/${signalId}/process`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action: 'process' })
+                });
+                
+                if (response.ok) {
+                    dekr.showNotification('Signal processed successfully', 'success');
+                    loadSignalsTable();
+                    loadSignalStats();
+                    
+                    // Close modal if open
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('signalModal'));
+                    if (modal) modal.hide();
+                }
+            } catch (error) {
+                console.error('Error processing signal:', error);
+                dekr.showNotification('Error processing signal', 'danger');
+            }
+        }
+
+        function ignoreSignal(signalId) {
+            dekr.showNotification('Signal ignored', 'info');
+            // Remove from UI
+            loadSignalsTable();
+        }
+
+        function refreshSignals() {
+            loadSignalsTable();
+            loadSignalStats();
+        }
+
+        function setupAutoRefresh() {
+            const autoRefreshCheck = document.getElementById('auto-refresh');
+            
+            function updateAutoRefresh() {
+                if (autoRefreshCheck.checked) {
+                    if (!signalUpdateInterval) {
+                        signalUpdateInterval = setInterval(() => {
+                            loadSignalsTable();
+                            loadSignalStats();
+                        }, 10000); // Update every 10 seconds
+                    }
+                } else {
+                    if (signalUpdateInterval) {
+                        clearInterval(signalUpdateInterval);
+                        signalUpdateInterval = null;
+                    }
+                }
+            }
+            
+            autoRefreshCheck.addEventListener('change', updateAutoRefresh);
+            updateAutoRefresh(); // Initialize
+        }
+
+        function setupFilterListeners() {
+            const filters = ['strategy-filter', 'symbol-filter', 'signal-type-filter', 'confidence-filter'];
+            
+            filters.forEach(filterId => {
+                const filter = document.getElementById(filterId);
+                if (filter) {
+                    filter.addEventListener('change', applyFilters);
+                }
+            });
+        }
+
+        function applyFilters() {
+            // This would typically filter the signals table
+            // For now, we'll just reload the data
+            loadSignalsTable();
+        }
+
+        // Initialize feather icons
+        feather.replace();
+    </script>
+</body>
+</html>
