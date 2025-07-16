@@ -23,13 +23,13 @@ class PolygonDataService:
         
     async def get_session(self):
         """Get or create aiohttp session"""
-        if not self.session:
+        if not self.session or self.session.closed:
             self.session = aiohttp.ClientSession()
         return self.session
     
     async def close_session(self):
         """Close aiohttp session"""
-        if self.session:
+        if self.session and not self.session.closed:
             await self.session.close()
             self.session = None
     
@@ -47,36 +47,39 @@ class PolygonDataService:
             
             url = f"{self.base_url}/v2/aggs/ticker/{symbol}/range/1/{timespan}/{start_date}/{end_date}"
             
-            session = await self.get_session()
-            async with session.get(url, params=params) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    results = data.get('results', [])
-                    
-                    if not results:
-                        logger.warning(f"No data returned for {symbol}")
+            # Create a new session for each request to avoid event loop issues
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url, params=params) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        results = data.get('results', [])
+                        
+                        if not results:
+                            logger.warning(f"No data returned for {symbol}")
+                            return pd.DataFrame()
+                        
+                        df = pd.DataFrame(results)
+                        df['timestamp'] = pd.to_datetime(df['t'], unit='ms')
+                        df = df.rename(columns={
+                            'o': 'open',
+                            'h': 'high',
+                            'l': 'low',
+                            'c': 'close',
+                            'v': 'volume'
+                        })
+                        df = df.set_index('timestamp')
+                        df = df[['open', 'high', 'low', 'close', 'volume']]
+                        
+                        logger.info(f"Retrieved {len(df)} data points for {symbol}")
+                        return df
+                    else:
+                        logger.error(f"Polygon API error for {symbol}: {response.status}")
                         return pd.DataFrame()
-                    
-                    df = pd.DataFrame(results)
-                    df['timestamp'] = pd.to_datetime(df['t'], unit='ms')
-                    df = df.rename(columns={
-                        'o': 'open',
-                        'h': 'high',
-                        'l': 'low',
-                        'c': 'close',
-                        'v': 'volume'
-                    })
-                    df = df.set_index('timestamp')
-                    df = df[['open', 'high', 'low', 'close', 'volume']]
-                    
-                    logger.info(f"Retrieved {len(df)} data points for {symbol}")
-                    return df
-                else:
-                    logger.error(f"Polygon API error for {symbol}: {response.status}")
-                    return pd.DataFrame()
                     
         except Exception as e:
             logger.error(f"Error fetching historical data for {symbol}: {str(e)}")
+            # Close and recreate session if there's an error
+            await self.close_session()
             return pd.DataFrame()
     
     async def get_real_time_quote(self, symbol: str) -> Dict[str, Any]:

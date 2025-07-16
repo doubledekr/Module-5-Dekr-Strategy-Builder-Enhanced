@@ -138,7 +138,13 @@ def get_signals():
                 "price": 150.00,
                 "confidence": 0.85,
                 "timestamp": datetime.now().isoformat(),
-                "conditions_met": ["RSI < 30", "Price above SMA"]
+                "conditions_met": ["RSI < 30", "Price above SMA"],
+                "market_data": {
+                    "current_price": 150.00,
+                    "volume": 45678900,
+                    "change": 2.45,
+                    "change_percent": 1.65
+                }
             },
             {
                 "id": "2",
@@ -147,7 +153,13 @@ def get_signals():
                 "price": 2750.00,
                 "confidence": 0.72,
                 "timestamp": datetime.now().isoformat(),
-                "conditions_met": ["RSI > 70", "MACD bearish crossover"]
+                "conditions_met": ["RSI > 70", "MACD bearish crossover"],
+                "market_data": {
+                    "current_price": 2750.00,
+                    "volume": 25432100,
+                    "change": -15.30,
+                    "change_percent": -0.55
+                }
             }
         ]
         return jsonify({"signals": signals})
