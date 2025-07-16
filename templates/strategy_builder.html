@@ -1,358 +1,430 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Strategy Builder - Dekr Strategy Builder Enhanced</title>
-    
-    <!-- Bootstrap CSS -->
+    <title>AI Strategy Builder - Dekr</title>
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
-    
-    <!-- Feather Icons -->
-    <script src="https://unpkg.com/feather-icons"></script>
-    
-    <!-- Custom CSS -->
-    <link href="{{ url_for('static', filename='css/custom.css') }}" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .strategy-prompt {
+            min-height: 120px;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        .example-card {
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid var(--bs-border-color);
+        }
+        .example-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border-color: var(--bs-primary);
+        }
+        .strategy-output {
+            background: var(--bs-dark);
+            border: 1px solid var(--bs-border-color);
+            border-radius: 0.375rem;
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        .loading-spinner {
+            display: none;
+        }
+        .strategy-explanation {
+            background: var(--bs-secondary);
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin-top: 1rem;
+        }
+        .condition-badge {
+            font-size: 0.875rem;
+            margin: 0.25rem;
+        }
+        .ai-thinking {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="/">
-                <i data-feather="trending-up" class="me-2"></i>
-                Dekr Strategy Builder
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-graph-up"></i> Dekr Strategy Builder
             </a>
-            
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/">
-                            <i data-feather="home" class="me-1"></i>Dashboard
-                        </a>
+                        <a class="nav-link" href="{{ url_for('index') }}">Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="/strategy-builder">
-                            <i data-feather="plus-circle" class="me-1"></i>Create Strategy
-                        </a>
+                        <a class="nav-link active" href="{{ url_for('strategy_builder') }}">Strategy Builder</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/backtesting">
-                            <i data-feather="bar-chart-2" class="me-1"></i>Backtesting
-                        </a>
+                        <a class="nav-link" href="{{ url_for('backtesting') }}">Backtesting</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/signals">
-                            <i data-feather="activity" class="me-1"></i>Signals
-                        </a>
+                        <a class="nav-link" href="{{ url_for('signals') }}">Signals</a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main class="container mt-4">
+    <div class="container mt-4">
         <!-- Header -->
         <div class="row mb-4">
             <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h2>Strategy Builder</h2>
-                        <p class="text-muted">Create and customize your trading strategies</p>
-                    </div>
-                    <div>
-                        <button class="btn btn-outline-secondary me-2" onclick="loadTemplate()">
-                            <i data-feather="copy" class="me-1"></i>Load Template
-                        </button>
-                        <button class="btn btn-primary" id="save-strategy">
-                            <i data-feather="save" class="me-1"></i>Save Strategy
-                        </button>
+                <h1><i class="bi bi-robot"></i> AI Strategy Builder</h1>
+                <p class="lead">Describe your trading strategy in plain language and let AI convert it into a structured trading system.</p>
+            </div>
+        </div>
+
+        <!-- Strategy Input Section -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-chat-dots"></i> Describe Your Strategy
+                        </h5>
+                        <div class="mb-3">
+                            <label for="strategyPrompt" class="form-label">Tell me about your trading strategy:</label>
+                            <textarea 
+                                class="form-control strategy-prompt" 
+                                id="strategyPrompt" 
+                                placeholder="Example: Buy when RSI is below 30 and price is above 20-day moving average, sell when RSI goes above 70 or price drops 3% below entry price..."
+                                rows="4"
+                            ></textarea>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-primary" id="parseStrategyBtn">
+                                <i class="bi bi-magic"></i> Create Strategy
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="clearBtn">
+                                <i class="bi bi-x-circle"></i> Clear
+                            </button>
+                        </div>
+                        <div class="loading-spinner mt-3" id="loadingSpinner">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border text-primary me-2" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span class="ai-thinking">AI is analyzing your strategy...</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Strategy Form -->
+        <!-- Strategy Examples -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h5><i class="bi bi-lightbulb"></i> Strategy Examples</h5>
+                <p class="text-muted">Click on any example to try it out:</p>
+                <div class="row" id="strategyExamples">
+                    <!-- Examples will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Strategy Output -->
         <div class="row">
-            <div class="col-md-8">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Strategy Details</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="strategy-form">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="strategy-name" class="form-label">Strategy Name</label>
-                                    <input type="text" class="form-control" id="strategy-name" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="strategy-type" class="form-label">Strategy Type</label>
-                                    <select class="form-select" id="strategy-type">
-                                        <option value="technical">Technical</option>
-                                        <option value="fundamental">Fundamental</option>
-                                        <option value="sentiment">Sentiment</option>
-                                        <option value="hybrid">Hybrid</option>
-                                    </select>
+            <div class="col-12">
+                <div id="strategyOutput" style="display: none;">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">
+                                <i class="bi bi-check-circle text-success"></i> Strategy Created Successfully
+                            </h5>
+                            
+                            <!-- Strategy Summary -->
+                            <div class="strategy-summary mb-3">
+                                <h6>Strategy Details:</h6>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Name:</strong> <span id="strategyName"></span><br>
+                                        <strong>Type:</strong> <span id="strategyType"></span><br>
+                                        <strong>Symbols:</strong> <span id="strategySymbols"></span>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <strong>Risk Management:</strong><br>
+                                        <small>
+                                            Stop Loss: <span id="stopLoss"></span> | 
+                                            Take Profit: <span id="takeProfit"></span> | 
+                                            Position Size: <span id="positionSize"></span>
+                                        </small>
+                                    </div>
                                 </div>
                             </div>
-                            
+
+                            <!-- Buy Conditions -->
                             <div class="mb-3">
-                                <label for="strategy-description" class="form-label">Description</label>
-                                <textarea class="form-control" id="strategy-description" rows="3"></textarea>
+                                <h6><i class="bi bi-arrow-up-circle text-success"></i> Buy Conditions:</h6>
+                                <div id="buyConditions"></div>
                             </div>
-                            
+
+                            <!-- Sell Conditions -->
                             <div class="mb-3">
-                                <label for="symbols" class="form-label">Symbols (comma-separated)</label>
-                                <input type="text" class="form-control" id="symbols" placeholder="AAPL, GOOGL, MSFT">
+                                <h6><i class="bi bi-arrow-down-circle text-danger"></i> Sell Conditions:</h6>
+                                <div id="sellConditions"></div>
                             </div>
-                        </form>
-                    </div>
-                </div>
 
-                <!-- Strategy Conditions -->
-                <div class="card mt-4">
-                    <div class="card-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0">Strategy Conditions</h5>
-                            <div>
-                                <button class="btn btn-sm btn-success me-2" onclick="strategyBuilder.addCondition('buy')">
-                                    <i data-feather="plus" class="me-1"></i>Add Buy Condition
+                            <!-- Strategy Explanation -->
+                            <div class="strategy-explanation">
+                                <h6><i class="bi bi-info-circle"></i> Strategy Explanation:</h6>
+                                <div id="strategyExplanation">Loading explanation...</div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="mt-4">
+                                <button type="button" class="btn btn-success" id="saveStrategyBtn">
+                                    <i class="bi bi-save"></i> Save Strategy
                                 </button>
-                                <button class="btn btn-sm btn-danger" onclick="strategyBuilder.addCondition('sell')">
-                                    <i data-feather="plus" class="me-1"></i>Add Sell Condition
+                                <button type="button" class="btn btn-outline-primary" id="testStrategyBtn">
+                                    <i class="bi bi-play-circle"></i> Test Strategy
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="modifyStrategyBtn">
+                                    <i class="bi bi-pencil"></i> Modify Strategy
                                 </button>
                             </div>
                         </div>
                     </div>
-                    <div class="card-body">
-                        <div id="conditions-container">
-                            <!-- Conditions will be populated by JavaScript -->
-                        </div>
-                        
-                        <div class="alert alert-info mt-3">
-                            <i data-feather="info" class="me-2"></i>
-                            <strong>Tip:</strong> Add multiple conditions to create more sophisticated strategies. 
-                            All conditions must be met for a signal to be generated.
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Risk Management -->
-                <div class="card mt-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Risk Management</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <label for="stop-loss" class="form-label">Stop Loss (%)</label>
-                                <input type="number" class="form-control" id="stop-loss" value="5" min="0" max="100" step="0.1">
-                            </div>
-                            <div class="col-md-6">
-                                <label for="take-profit" class="form-label">Take Profit (%)</label>
-                                <input type="number" class="form-control" id="take-profit" value="10" min="0" max="100" step="0.1">
-                            </div>
-                        </div>
-                        <div class="row mt-3">
-                            <div class="col-md-6">
-                                <label for="position-size" class="form-label">Position Size (%)</label>
-                                <input type="number" class="form-control" id="position-size" value="10" min="1" max="100" step="1">
-                            </div>
-                            <div class="col-md-6">
-                                <label for="max-positions" class="form-label">Max Positions</label>
-                                <input type="number" class="form-control" id="max-positions" value="5" min="1" max="20" step="1">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sidebar -->
-            <div class="col-md-4">
-                <!-- Strategy Templates -->
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Strategy Templates</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="list-group list-group-flush">
-                            <button class="list-group-item list-group-item-action" onclick="loadTemplate('golden_cross')">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h6 class="mb-1">Golden Cross</h6>
-                                </div>
-                                <p class="mb-1">50-day SMA crosses above 200-day SMA</p>
-                                <small class="text-muted">Bullish trend following</small>
-                            </button>
-                            <button class="list-group-item list-group-item-action" onclick="loadTemplate('rsi_oversold')">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h6 class="mb-1">RSI Oversold</h6>
-                                </div>
-                                <p class="mb-1">Buy when RSI < 30, sell when RSI > 70</p>
-                                <small class="text-muted">Mean reversion strategy</small>
-                            </button>
-                            <button class="list-group-item list-group-item-action" onclick="loadTemplate('bollinger_bounce')">
-                                <div class="d-flex w-100 justify-content-between">
-                                    <h6 class="mb-1">Bollinger Bounce</h6>
-                                </div>
-                                <p class="mb-1">Buy at lower band, sell at upper band</p>
-                                <small class="text-muted">Range trading strategy</small>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Indicator Reference -->
-                <div class="card mt-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Indicator Reference</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="accordion" id="indicatorAccordion">
-                            <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#smaCollapse">
-                                        Simple Moving Average (SMA)
-                                    </button>
-                                </h2>
-                                <div id="smaCollapse" class="accordion-collapse collapse" data-bs-parent="#indicatorAccordion">
-                                    <div class="accordion-body">
-                                        <p>Average price over a specified period. Good for trend identification.</p>
-                                        <strong>Parameters:</strong> Period (default: 20)
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#rsiCollapse">
-                                        RSI (Relative Strength Index)
-                                    </button>
-                                </h2>
-                                <div id="rsiCollapse" class="accordion-collapse collapse" data-bs-parent="#indicatorAccordion">
-                                    <div class="accordion-body">
-                                        <p>Momentum oscillator (0-100). Above 70 = overbought, below 30 = oversold.</p>
-                                        <strong>Parameters:</strong> Period (default: 14)
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="accordion-item">
-                                <h2 class="accordion-header">
-                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#macdCollapse">
-                                        MACD
-                                    </button>
-                                </h2>
-                                <div id="macdCollapse" class="accordion-collapse collapse" data-bs-parent="#indicatorAccordion">
-                                    <div class="accordion-body">
-                                        <p>Moving Average Convergence Divergence. Shows relationship between two moving averages.</p>
-                                        <strong>Parameters:</strong> Fast (12), Slow (26), Signal (9)
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Strategy Validation -->
-                <div class="card mt-4">
-                    <div class="card-header">
-                        <h5 class="mb-0">Strategy Validation</h5>
-                    </div>
-                    <div class="card-body">
-                        <div id="validation-results">
-                            <p class="text-muted">Add conditions to validate your strategy</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- Template Modal -->
-    <div class="modal fade" id="templateModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Load Strategy Template</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Loading a template will replace your current strategy. Are you sure you want to continue?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="confirm-template">Load Template</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Notifications Container -->
-    <div id="notifications" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>
-
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Custom JS -->
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-
     <script>
-        // Template loading functionality
-        let selectedTemplate = null;
+        class AIStrategyBuilder {
+            constructor() {
+                this.currentStrategy = null;
+                this.init();
+            }
 
-        function loadTemplate(templateId) {
-            if (templateId) {
-                selectedTemplate = templateId;
-                const modal = new bootstrap.Modal(document.getElementById('templateModal'));
-                modal.show();
-            } else {
-                // Show all templates
-                fetch('/api/strategies/templates/')
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Available templates:', data.templates);
+            init() {
+                this.bindEvents();
+                this.loadStrategyExamples();
+            }
+
+            bindEvents() {
+                document.getElementById('parseStrategyBtn').addEventListener('click', () => this.parseStrategy());
+                document.getElementById('clearBtn').addEventListener('click', () => this.clearForm());
+                document.getElementById('saveStrategyBtn').addEventListener('click', () => this.saveStrategy());
+                document.getElementById('testStrategyBtn').addEventListener('click', () => this.testStrategy());
+                document.getElementById('modifyStrategyBtn').addEventListener('click', () => this.modifyStrategy());
+            }
+
+            async loadStrategyExamples() {
+                try {
+                    const response = await fetch('/api/ai/strategy-examples');
+                    const examples = await response.json();
+                    this.displayExamples(examples);
+                } catch (error) {
+                    console.error('Error loading strategy examples:', error);
+                }
+            }
+
+            displayExamples(examples) {
+                const container = document.getElementById('strategyExamples');
+                container.innerHTML = '';
+
+                examples.forEach(example => {
+                    const exampleCard = document.createElement('div');
+                    exampleCard.className = 'col-md-4 mb-3';
+                    exampleCard.innerHTML = `
+                        <div class="card example-card h-100" data-description="${example.description}">
+                            <div class="card-body">
+                                <h6 class="card-title">${example.title}</h6>
+                                <p class="card-text small">${example.description}</p>
+                                <span class="badge bg-secondary">${example.category}</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    exampleCard.addEventListener('click', () => {
+                        document.getElementById('strategyPrompt').value = example.description;
+                        this.parseStrategy();
                     });
+                    
+                    container.appendChild(exampleCard);
+                });
+            }
+
+            async parseStrategy() {
+                const description = document.getElementById('strategyPrompt').value.trim();
+                
+                if (!description) {
+                    alert('Please enter a strategy description');
+                    return;
+                }
+
+                this.showLoading(true);
+                this.hideOutput();
+
+                try {
+                    const response = await fetch('/api/ai/parse-strategy', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            description: description,
+                            user_id: 1
+                        })
+                    });
+
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        this.currentStrategy = result;
+                        this.displayStrategy(result);
+                        this.explainStrategy(result);
+                    } else {
+                        throw new Error(result.error || 'Failed to parse strategy');
+                    }
+                } catch (error) {
+                    console.error('Error parsing strategy:', error);
+                    alert('Error creating strategy: ' + error.message);
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            displayStrategy(strategy) {
+                // Fill strategy summary
+                document.getElementById('strategyName').textContent = strategy.name;
+                document.getElementById('strategyType').textContent = strategy.strategy_type;
+                document.getElementById('strategySymbols').textContent = strategy.symbols.join(', ');
+                
+                // Risk management
+                const risk = strategy.risk_management;
+                document.getElementById('stopLoss').textContent = (risk.stop_loss * 100).toFixed(1) + '%';
+                document.getElementById('takeProfit').textContent = (risk.take_profit * 100).toFixed(1) + '%';
+                document.getElementById('positionSize').textContent = (risk.position_size * 100).toFixed(1) + '%';
+
+                // Buy conditions
+                this.displayConditions(strategy.buy_conditions, 'buyConditions');
+                
+                // Sell conditions
+                this.displayConditions(strategy.sell_conditions, 'sellConditions');
+
+                this.showOutput();
+            }
+
+            displayConditions(conditions, containerId) {
+                const container = document.getElementById(containerId);
+                container.innerHTML = '';
+
+                conditions.forEach(condition => {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-info condition-badge';
+                    badge.textContent = `${condition.indicator} ${condition.operator} ${condition.value} (${condition.timeframe})`;
+                    container.appendChild(badge);
+                });
+            }
+
+            async explainStrategy(strategy) {
+                try {
+                    const response = await fetch('/api/ai/explain-strategy', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            strategy: strategy
+                        })
+                    });
+
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        document.getElementById('strategyExplanation').innerHTML = result.explanation.replace(/\n/g, '<br>');
+                    } else {
+                        document.getElementById('strategyExplanation').textContent = 'Unable to generate explanation';
+                    }
+                } catch (error) {
+                    console.error('Error explaining strategy:', error);
+                    document.getElementById('strategyExplanation').textContent = 'Unable to generate explanation';
+                }
+            }
+
+            async saveStrategy() {
+                if (!this.currentStrategy) return;
+
+                try {
+                    const response = await fetch('/api/strategies', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(this.currentStrategy)
+                    });
+
+                    if (response.ok) {
+                        alert('Strategy saved successfully!');
+                        // Redirect to dashboard
+                        window.location.href = '/';
+                    } else {
+                        throw new Error('Failed to save strategy');
+                    }
+                } catch (error) {
+                    console.error('Error saving strategy:', error);
+                    alert('Error saving strategy: ' + error.message);
+                }
+            }
+
+            testStrategy() {
+                if (!this.currentStrategy) return;
+                
+                // Navigate to backtesting page with strategy data
+                sessionStorage.setItem('testStrategy', JSON.stringify(this.currentStrategy));
+                window.location.href = '/backtesting';
+            }
+
+            modifyStrategy() {
+                if (!this.currentStrategy) return;
+                
+                // Put strategy back in the prompt for modification
+                document.getElementById('strategyPrompt').value = this.currentStrategy.description;
+                this.hideOutput();
+                document.getElementById('strategyPrompt').focus();
+            }
+
+            clearForm() {
+                document.getElementById('strategyPrompt').value = '';
+                this.hideOutput();
+            }
+
+            showLoading(show) {
+                const spinner = document.getElementById('loadingSpinner');
+                spinner.style.display = show ? 'block' : 'none';
+            }
+
+            showOutput() {
+                document.getElementById('strategyOutput').style.display = 'block';
+            }
+
+            hideOutput() {
+                document.getElementById('strategyOutput').style.display = 'none';
             }
         }
 
-        document.getElementById('confirm-template').addEventListener('click', function() {
-            if (selectedTemplate) {
-                fetch('/api/strategies/templates/')
-                    .then(response => response.json())
-                    .then(data => {
-                        const template = data.templates.find(t => t.id === selectedTemplate);
-                        if (template) {
-                            // Populate form with template data
-                            document.getElementById('strategy-name').value = template.name;
-                            document.getElementById('strategy-description').value = template.description;
-                            document.getElementById('strategy-type').value = template.strategy_type;
-                            
-                            // Clear and add conditions
-                            strategyBuilder.conditions = [];
-                            template.buy_conditions.forEach(condition => {
-                                strategyBuilder.conditions.push({...condition, type: 'buy'});
-                            });
-                            template.sell_conditions.forEach(condition => {
-                                strategyBuilder.conditions.push({...condition, type: 'sell'});
-                            });
-                            
-                            strategyBuilder.updateConditionsDisplay();
-                            
-                            // Close modal
-                            const modal = bootstrap.Modal.getInstance(document.getElementById('templateModal'));
-                            modal.hide();
-                        }
-                    });
-            }
+        // Initialize the strategy builder when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new AIStrategyBuilder();
         });
-
-        // Initialize feather icons
-        feather.replace();
     </script>
 </body>
 </html>

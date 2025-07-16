@@ -12,6 +12,7 @@ from flask import Flask, render_template, request, jsonify, url_for
 from werkzeug.middleware.proxy_fix import ProxyFix
 import asyncio
 from contextlib import asynccontextmanager
+from services.ai_strategy_builder import AIStrategyBuilder
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -35,6 +36,9 @@ def initialize_database():
 # Initialize database when app starts
 with app.app_context():
     initialize_database()
+
+# Initialize AI Strategy Builder
+ai_builder = AIStrategyBuilder()
 
 # Root route
 @app.route('/')
@@ -179,6 +183,50 @@ def run_backtest(strategy_id):
     except Exception as e:
         logger.error(f"Error running backtest: {e}")
         return jsonify({"error": "Failed to run backtest"}), 500
+
+# AI Strategy Builder endpoints
+@app.route('/api/ai/strategy-examples')
+def get_strategy_examples():
+    """Get AI strategy examples"""
+    try:
+        examples = asyncio.run(ai_builder.generate_strategy_examples())
+        return jsonify(examples)
+    except Exception as e:
+        logger.error(f"Error fetching strategy examples: {e}")
+        return jsonify({"error": "Failed to fetch strategy examples"}), 500
+
+@app.route('/api/ai/parse-strategy', methods=['POST'])
+def parse_strategy():
+    """Parse natural language strategy description"""
+    try:
+        data = request.get_json()
+        description = data.get('description', '')
+        user_id = data.get('user_id', 1)  # Default user ID
+        
+        if not description:
+            return jsonify({"error": "Description is required"}), 400
+        
+        strategy = asyncio.run(ai_builder.parse_strategy_description(description, user_id))
+        return jsonify(strategy)
+    except Exception as e:
+        logger.error(f"Error parsing strategy: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/ai/explain-strategy', methods=['POST'])
+def explain_strategy():
+    """Explain a strategy in plain language"""
+    try:
+        data = request.get_json()
+        strategy_data = data.get('strategy', {})
+        
+        if not strategy_data:
+            return jsonify({"error": "Strategy data is required"}), 400
+        
+        explanation = asyncio.run(ai_builder.explain_strategy(strategy_data))
+        return jsonify({"explanation": explanation})
+    except Exception as e:
+        logger.error(f"Error explaining strategy: {e}")
+        return jsonify({"error": "Failed to explain strategy"}), 500
 
 # Error handlers
 @app.errorhandler(404)
