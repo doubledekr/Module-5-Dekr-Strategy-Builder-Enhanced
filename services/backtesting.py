@@ -160,8 +160,8 @@ class BacktestingEngine:
                     
                     # Calculate trade metrics
                     trade = {
-                        'entry_date': position['entry_date'].isoformat(),
-                        'exit_date': df.index[i].isoformat(),
+                        'entry_date': position['entry_date'].strftime('%Y-%m-%dT%H:%M:%S'),
+                        'exit_date': pd.Timestamp(df.index[i]).strftime('%Y-%m-%dT%H:%M:%S'),
                         'entry_price': position['entry_price'],
                         'exit_price': exit_price,
                         'duration_days': (df.index[i] - position['entry_date']).days,
@@ -229,10 +229,17 @@ class BacktestingEngine:
         years = days / 365.25
         annualized_return = (1 + total_return) ** (1/years) - 1 if years > 0 else 0
         
-        # Calculate Sharpe ratio (assuming risk-free rate of 0.02)
-        risk_free_rate = 0.02
-        excess_returns = np.array(returns) - risk_free_rate/252
-        sharpe_ratio = np.mean(excess_returns) / np.std(excess_returns) * np.sqrt(252) if np.std(excess_returns) > 0 else 0
+        # Calculate Sharpe ratio using simplified approach for trade-based returns
+        # Note: This is a simplified calculation - true Sharpe should use daily returns
+        if len(returns) > 1:
+            risk_free_rate = 0.02
+            # Convert to approximate daily returns (very rough approximation)
+            avg_trade_duration = np.mean([trade['duration_days'] for trade in trades])
+            daily_trade_returns = [r / trade['duration_days'] for r, trade in zip(returns, trades)]
+            excess_returns = np.array(daily_trade_returns) - risk_free_rate/252
+            sharpe_ratio = np.mean(excess_returns) / np.std(excess_returns) * np.sqrt(252) if np.std(excess_returns) > 0 else 0
+        else:
+            sharpe_ratio = 0.0
         
         # Calculate max drawdown
         cumulative_returns = np.cumprod([1 + r for r in returns])
@@ -253,14 +260,14 @@ class BacktestingEngine:
         profit_factor = total_profit / total_loss if total_loss > 0 else float('inf')
         
         return {
-            'total_return': total_return,
-            'annualized_return': annualized_return,
-            'sharpe_ratio': sharpe_ratio,
-            'max_drawdown': max_drawdown,
-            'win_rate': win_rate,
-            'total_trades': len(trades),
-            'avg_trade_duration': avg_trade_duration,
-            'profit_factor': profit_factor
+            'total_return': float(total_return),
+            'annualized_return': float(annualized_return),
+            'sharpe_ratio': float(sharpe_ratio),
+            'max_drawdown': float(max_drawdown),
+            'win_rate': float(win_rate),
+            'total_trades': float(len(trades)),
+            'avg_trade_duration': float(avg_trade_duration),
+            'profit_factor': float(profit_factor)
         }
     
     async def _save_backtest_result(self, result: Dict[str, Any]):
