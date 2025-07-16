@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 class PolygonDataService:
     def __init__(self):
-        self.api_key = os.getenv('POLYGON_API_KEY', 'demo_key')
+        self.api_key = os.getenv('POLYGON_API_KEY')
+        if not self.api_key:
+            raise ValueError("POLYGON_API_KEY environment variable is required")
         self.base_url = "https://api.polygon.io"
         self.ws_url = "wss://socket.polygon.io"
         self.session = None

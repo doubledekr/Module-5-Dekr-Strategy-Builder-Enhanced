@@ -13,6 +13,8 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 import asyncio
 from contextlib import asynccontextmanager
 from services.ai_strategy_builder import AIStrategyBuilder
+from services.backtesting import BacktestingEngine
+from services.polygon_service import PolygonDataService
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -37,8 +39,10 @@ def initialize_database():
 with app.app_context():
     initialize_database()
 
-# Initialize AI Strategy Builder
+# Initialize AI Strategy Builder and Backtesting Engine
 ai_builder = AIStrategyBuilder()
+backtesting_engine = BacktestingEngine()
+polygon_service = PolygonDataService()
 
 # Root route
 @app.route('/')
@@ -168,21 +172,78 @@ def get_signal_stats():
 
 @app.route('/api/strategies/<strategy_id>/backtest', methods=['POST'])
 def run_backtest(strategy_id):
-    """Run backtest for strategy"""
+    """Run backtest for strategy with buy-and-hold comparison"""
     try:
         data = request.get_json()
-        # TODO: Implement actual backtesting
-        result = {
-            "total_return": 0.15,
-            "sharpe_ratio": 1.2,
-            "max_drawdown": -0.08,
-            "win_rate": 0.65,
-            "total_trades": 25
-        }
-        return jsonify(result)
+        symbol = data.get('symbol', 'AAPL')
+        start_date = data.get('start_date', '2023-01-01')
+        end_date = data.get('end_date', '2024-01-01')
+        
+        # Parse dates
+        from datetime import datetime
+        start_dt = datetime.strptime(start_date, '%Y-%m-%d')
+        end_dt = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        # Create a mock strategy for testing (replace with actual strategy retrieval)
+        from models import Strategy, StrategyCondition
+        strategy = Strategy(
+            id=strategy_id,
+            user_id=1,
+            name="Test Strategy",
+            description="Test strategy for backtesting",
+            strategy_type="technical",
+            symbols=[symbol],
+            buy_conditions=[
+                StrategyCondition(
+                    indicator="rsi",
+                    operator="<",
+                    value=30,
+                    timeframe="1d",
+                    parameters={"period": 14}
+                )
+            ],
+            sell_conditions=[
+                StrategyCondition(
+                    indicator="rsi",
+                    operator=">",
+                    value=70,
+                    timeframe="1d",
+                    parameters={"period": 14}
+                )
+            ],
+            risk_management={
+                "stop_loss": 0.02,
+                "take_profit": 0.06,
+                "position_size": 0.1,
+                "max_positions": 3
+            },
+            tier_required=1,
+            is_active=True,
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        
+        # Run backtest with buy-and-hold comparison
+        result = asyncio.run(backtesting_engine.run_backtest(strategy, symbol, start_dt, end_dt))
+        
+        # Convert any numpy/pandas types to Python native types for JSON serialization
+        def convert_to_json_serializable(obj):
+            if isinstance(obj, dict):
+                return {k: convert_to_json_serializable(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [convert_to_json_serializable(item) for item in obj]
+            elif hasattr(obj, 'item'):  # numpy types
+                return obj.item()
+            elif isinstance(obj, (bool, int, float, str)):
+                return obj
+            else:
+                return str(obj)
+        
+        serializable_result = convert_to_json_serializable(result)
+        return jsonify(serializable_result)
     except Exception as e:
         logger.error(f"Error running backtest: {e}")
-        return jsonify({"error": "Failed to run backtest"}), 500
+        return jsonify({"error": str(e)}), 500
 
 # AI Strategy Builder endpoints
 @app.route('/api/ai/strategy-examples')

@@ -1,164 +1,152 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Backtesting - Dekr Strategy Builder Enhanced</title>
-    
-    <!-- Bootstrap CSS -->
+    <title>Backtesting - Dekr</title>
     <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
-    
-    <!-- Feather Icons -->
-    <script src="https://unpkg.com/feather-icons"></script>
-    
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Custom CSS -->
-    <link href="{{ url_for('static', filename='css/custom.css') }}" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .performance-card {
+            border: 1px solid var(--bs-border-color);
+            border-radius: 0.375rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .positive {
+            color: #28a745;
+        }
+        .negative {
+            color: #dc3545;
+        }
+        .neutral {
+            color: var(--bs-secondary);
+        }
+        .comparison-table {
+            margin-top: 2rem;
+        }
+        .recommendation-card {
+            border-left: 4px solid var(--bs-primary);
+            background: var(--bs-dark);
+            padding: 1.5rem;
+            margin-top: 1rem;
+        }
+        .recommendation-card.buy-hold {
+            border-left-color: #ffc107;
+        }
+        .recommendation-card.strategy {
+            border-left-color: #28a745;
+        }
+        .recommendation-card.cautious {
+            border-left-color: #fd7e14;
+        }
+        .loading-spinner {
+            display: none;
+        }
+        .chart-container {
+            height: 400px;
+            margin-top: 2rem;
+        }
+        .confidence-badge {
+            font-size: 0.875rem;
+            padding: 0.25rem 0.75rem;
+        }
+        .confidence-high {
+            background-color: #28a745;
+        }
+        .confidence-medium {
+            background-color: #ffc107;
+            color: #000;
+        }
+        .confidence-low {
+            background-color: #dc3545;
+        }
+    </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
         <div class="container">
-            <a class="navbar-brand" href="/">
-                <i data-feather="trending-up" class="me-2"></i>
-                Dekr Strategy Builder
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-graph-up"></i> Dekr Strategy Builder
             </a>
-            
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/">
-                            <i data-feather="home" class="me-1"></i>Dashboard
-                        </a>
+                        <a class="nav-link" href="{{ url_for('index') }}">Dashboard</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/strategy-builder">
-                            <i data-feather="plus-circle" class="me-1"></i>Create Strategy
-                        </a>
+                        <a class="nav-link" href="{{ url_for('strategy_builder') }}">Strategy Builder</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="/backtesting">
-                            <i data-feather="bar-chart-2" class="me-1"></i>Backtesting
-                        </a>
+                        <a class="nav-link active" href="{{ url_for('backtesting') }}">Backtesting</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/signals">
-                            <i data-feather="activity" class="me-1"></i>Signals
-                        </a>
+                        <a class="nav-link" href="{{ url_for('signals') }}">Signals</a>
                     </li>
                 </ul>
             </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main class="container mt-4">
+    <div class="container mt-4">
         <!-- Header -->
         <div class="row mb-4">
             <div class="col-12">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h2>Strategy Backtesting</h2>
-                        <p class="text-muted">Test your strategies against historical data</p>
-                    </div>
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <small class="text-muted">Powered by</small>
-                            <strong class="text-primary">Polygon.io</strong>
-                        </div>
-                    </div>
-                </div>
+                <h1><i class="bi bi-graph-up-arrow"></i> Strategy Backtesting</h1>
+                <p class="lead">Test your trading strategies against historical data and compare with buy-and-hold performance.</p>
             </div>
         </div>
 
         <!-- Backtest Configuration -->
         <div class="row mb-4">
-            <div class="col-md-8">
+            <div class="col-12">
                 <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Backtest Configuration</h5>
-                    </div>
                     <div class="card-body">
-                        <form id="backtest-form">
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="strategy-select" class="form-label">Select Strategy</label>
-                                    <select class="form-select" id="strategy-select" required>
-                                        <option value="">Select a strategy</option>
-                                        <!-- Options will be populated by JavaScript -->
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="symbol" class="form-label">Symbol</label>
-                                    <input type="text" class="form-control" id="symbol" placeholder="AAPL" required>
+                        <h5 class="card-title">
+                            <i class="bi bi-gear"></i> Backtest Configuration
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="symbolInput" class="form-label">Symbol</label>
+                                    <input type="text" class="form-control" id="symbolInput" value="AAPL" placeholder="Enter symbol">
                                 </div>
                             </div>
-                            
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="start-date" class="form-label">Start Date</label>
-                                    <input type="date" class="form-control" id="start-date" required>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="end-date" class="form-label">End Date</label>
-                                    <input type="date" class="form-control" id="end-date" required>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="startDate" class="form-label">Start Date</label>
+                                    <input type="date" class="form-control" id="startDate" value="2023-01-01">
                                 </div>
                             </div>
-                            
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="initial-capital" class="form-label">Initial Capital</label>
-                                    <input type="number" class="form-control" id="initial-capital" value="10000" min="1000" step="1000">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="commission" class="form-label">Commission (%)</label>
-                                    <input type="number" class="form-control" id="commission" value="0.1" min="0" max="5" step="0.01">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="endDate" class="form-label">End Date</label>
+                                    <input type="date" class="form-control" id="endDate" value="2024-01-01">
                                 </div>
                             </div>
-                            
-                            <div class="d-grid">
-                                <button type="button" class="btn btn-primary btn-lg" id="run-backtest">
-                                    <i data-feather="play" class="me-2"></i>Run Backtest
-                                </button>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button type="button" class="btn btn-primary d-block w-100" id="runBacktestBtn">
+                                        <i class="bi bi-play-circle"></i> Run Backtest
+                                    </button>
+                                </div>
                             </div>
-                        </form>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Backtest Info -->
-            <div class="col-md-4">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Backtesting Info</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <h6>What is Backtesting?</h6>
-                            <p class="small text-muted">
-                                Backtesting evaluates how well your strategy would have performed using historical data.
-                            </p>
                         </div>
-                        
-                        <div class="mb-3">
-                            <h6>Key Metrics:</h6>
-                            <ul class="small text-muted">
-                                <li><strong>Total Return:</strong> Overall performance</li>
-                                <li><strong>Sharpe Ratio:</strong> Risk-adjusted return</li>
-                                <li><strong>Max Drawdown:</strong> Largest loss period</li>
-                                <li><strong>Win Rate:</strong> Percentage of winning trades</li>
-                            </ul>
-                        </div>
-                        
-                        <div class="alert alert-warning">
-                            <i data-feather="alert-triangle" class="me-2"></i>
-                            <strong>Disclaimer:</strong> Past performance does not guarantee future results.
+                        <div class="loading-spinner" id="loadingSpinner">
+                            <div class="d-flex align-items-center">
+                                <div class="spinner-border text-primary me-2" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <span>Running backtest with real market data...</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -166,104 +154,395 @@
         </div>
 
         <!-- Results Section -->
-        <div class="row">
-            <div class="col-12">
-                <div id="backtest-results">
-                    <!-- Results will be populated by JavaScript -->
+        <div id="resultsSection" style="display: none;">
+            <!-- Recommendation Card -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="recommendation-card" id="recommendationCard">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="mb-2">
+                                    <i class="bi bi-lightbulb"></i> Recommendation
+                                    <span class="badge confidence-badge ms-2" id="confidenceBadge">HIGH</span>
+                                </h5>
+                                <p class="mb-2" id="recommendationMessage"></p>
+                                <ul class="mb-0" id="recommendationDetails"></ul>
+                            </div>
+                            <div class="text-end">
+                                <i class="bi bi-check-circle-fill fs-1" id="recommendationIcon"></i>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Historical Results -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header">
-                        <h5 class="mb-0">Recent Backtests</h5>
+            <!-- Performance Comparison -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-robot"></i> Strategy Performance</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <div class="metric-value" id="strategyReturn">--</div>
+                                        <small class="text-muted">Total Return</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <div class="metric-value" id="strategySharpe">--</div>
+                                        <small class="text-muted">Sharpe Ratio</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <div class="metric-value" id="strategyDrawdown">--</div>
+                                        <small class="text-muted">Max Drawdown</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <div class="metric-value" id="strategyTrades">--</div>
+                                        <small class="text-muted">Total Trades</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Strategy</th>
-                                        <th>Symbol</th>
-                                        <th>Period</th>
-                                        <th>Total Return</th>
-                                        <th>Sharpe Ratio</th>
-                                        <th>Max Drawdown</th>
-                                        <th>Win Rate</th>
-                                        <th>Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="historical-results">
-                                    <tr>
-                                        <td colspan="8" class="text-center text-muted">
-                                            No historical backtests found. Run your first backtest to see results here.
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Buy & Hold Performance</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <div class="metric-value" id="buyHoldReturn">--</div>
+                                        <small class="text-muted">Total Return</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <div class="metric-value" id="buyHoldSharpe">--</div>
+                                        <small class="text-muted">Sharpe Ratio</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mt-3">
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <div class="metric-value" id="buyHoldDrawdown">--</div>
+                                        <small class="text-muted">Max Drawdown</small>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="text-center">
+                                        <div class="metric-value neutral">1</div>
+                                        <small class="text-muted">Total Trades</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Comparison Table -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-table"></i> Detailed Comparison</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Metric</th>
+                                            <th>Strategy</th>
+                                            <th>Buy & Hold</th>
+                                            <th>Difference</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="comparisonTableBody">
+                                        <!-- Data will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trade Details -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="bi bi-list-ul"></i> Trade Details</h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Entry Date</th>
+                                            <th>Exit Date</th>
+                                            <th>Entry Price</th>
+                                            <th>Exit Price</th>
+                                            <th>Return</th>
+                                            <th>Duration</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tradesTableBody">
+                                        <!-- Trades will be populated here -->
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
-    </main>
+    </div>
 
-    <!-- Notifications Container -->
-    <div id="notifications" class="position-fixed top-0 end-0 p-3" style="z-index: 1050;"></div>
-
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Custom JS -->
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-
     <script>
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set default dates
-            const endDate = new Date();
-            const startDate = new Date();
-            startDate.setFullYear(endDate.getFullYear() - 1);
-            
-            document.getElementById('start-date').value = startDate.toISOString().split('T')[0];
-            document.getElementById('end-date').value = endDate.toISOString().split('T')[0];
-            
-            // Load historical results
-            loadHistoricalResults();
-        });
+        class BacktestingApp {
+            constructor() {
+                this.init();
+            }
 
-        async function loadHistoricalResults() {
-            try {
-                const response = await fetch('/api/strategies/1/backtest-results');
-                const data = await response.json();
-                
-                if (data.backtest_results && data.backtest_results.length > 0) {
-                    const tbody = document.getElementById('historical-results');
-                    tbody.innerHTML = data.backtest_results.map(result => `
-                        <tr>
-                            <td>Strategy Name</td>
-                            <td>${result.symbol}</td>
-                            <td>${new Date(result.start_date).toLocaleDateString()} - ${new Date(result.end_date).toLocaleDateString()}</td>
-                            <td class="${result.total_return > 0 ? 'text-success' : 'text-danger'}">
-                                ${dekr.formatPercentage(result.total_return)}
-                            </td>
-                            <td>${result.sharpe_ratio.toFixed(2)}</td>
-                            <td class="text-danger">${dekr.formatPercentage(result.max_drawdown)}</td>
-                            <td>${dekr.formatPercentage(result.win_rate)}</td>
-                            <td>${new Date(result.created_at).toLocaleDateString()}</td>
-                        </tr>
-                    `).join('');
+            init() {
+                this.bindEvents();
+                this.loadTestStrategy();
+            }
+
+            bindEvents() {
+                document.getElementById('runBacktestBtn').addEventListener('click', () => this.runBacktest());
+            }
+
+            loadTestStrategy() {
+                // Check if we have a strategy from the strategy builder
+                const testStrategy = sessionStorage.getItem('testStrategy');
+                if (testStrategy) {
+                    this.currentStrategy = JSON.parse(testStrategy);
+                    sessionStorage.removeItem('testStrategy');
+                    // Auto-run backtest if strategy is loaded
+                    this.runBacktest();
                 }
-            } catch (error) {
-                console.error('Error loading historical results:', error);
+            }
+
+            async runBacktest() {
+                const symbol = document.getElementById('symbolInput').value.toUpperCase();
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+
+                if (!symbol || !startDate || !endDate) {
+                    alert('Please fill in all fields');
+                    return;
+                }
+
+                this.showLoading(true);
+                this.hideResults();
+
+                try {
+                    const response = await fetch(`/api/strategies/test/backtest`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            symbol: symbol,
+                            start_date: startDate,
+                            end_date: endDate
+                        })
+                    });
+
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        this.displayResults(result);
+                    } else {
+                        throw new Error(result.error || 'Backtest failed');
+                    }
+                } catch (error) {
+                    console.error('Error running backtest:', error);
+                    alert('Error running backtest: ' + error.message);
+                } finally {
+                    this.showLoading(false);
+                }
+            }
+
+            displayResults(result) {
+                const strategy = result.strategy_performance;
+                const buyHold = result.buy_hold_performance;
+                const comparison = result.comparison;
+                const recommendation = result.recommendation;
+
+                // Update performance metrics
+                this.updatePerformanceMetrics(strategy, buyHold);
+                
+                // Update recommendation
+                this.updateRecommendation(recommendation);
+                
+                // Update comparison table
+                this.updateComparisonTable(strategy, buyHold, comparison);
+                
+                // Update trades table
+                this.updateTradesTable(strategy.trades);
+                
+                this.showResults();
+            }
+
+            updatePerformanceMetrics(strategy, buyHold) {
+                // Strategy metrics
+                document.getElementById('strategyReturn').textContent = this.formatPercentage(strategy.total_return);
+                document.getElementById('strategyReturn').className = 'metric-value ' + this.getColorClass(strategy.total_return);
+                
+                document.getElementById('strategySharpe').textContent = strategy.sharpe_ratio.toFixed(2);
+                document.getElementById('strategySharpe').className = 'metric-value ' + this.getColorClass(strategy.sharpe_ratio);
+                
+                document.getElementById('strategyDrawdown').textContent = this.formatPercentage(strategy.max_drawdown);
+                document.getElementById('strategyDrawdown').className = 'metric-value ' + this.getColorClass(strategy.max_drawdown, true);
+                
+                document.getElementById('strategyTrades').textContent = strategy.total_trades;
+
+                // Buy & Hold metrics
+                document.getElementById('buyHoldReturn').textContent = this.formatPercentage(buyHold.total_return);
+                document.getElementById('buyHoldReturn').className = 'metric-value ' + this.getColorClass(buyHold.total_return);
+                
+                document.getElementById('buyHoldSharpe').textContent = buyHold.sharpe_ratio.toFixed(2);
+                document.getElementById('buyHoldSharpe').className = 'metric-value ' + this.getColorClass(buyHold.sharpe_ratio);
+                
+                document.getElementById('buyHoldDrawdown').textContent = this.formatPercentage(buyHold.max_drawdown);
+                document.getElementById('buyHoldDrawdown').className = 'metric-value ' + this.getColorClass(buyHold.max_drawdown, true);
+            }
+
+            updateRecommendation(recommendation) {
+                const card = document.getElementById('recommendationCard');
+                const message = document.getElementById('recommendationMessage');
+                const details = document.getElementById('recommendationDetails');
+                const confidence = document.getElementById('confidenceBadge');
+                const icon = document.getElementById('recommendationIcon');
+
+                message.textContent = recommendation.message;
+                confidence.textContent = recommendation.confidence;
+                confidence.className = `badge confidence-badge ms-2 confidence-${recommendation.confidence.toLowerCase()}`;
+
+                // Update card styling based on recommendation
+                if (recommendation.recommendation === 'BUY_HOLD_RECOMMENDED') {
+                    card.className = 'recommendation-card buy-hold';
+                    icon.className = 'bi bi-bar-chart-fill fs-1 text-warning';
+                } else if (recommendation.recommendation === 'STRATEGY_RECOMMENDED') {
+                    card.className = 'recommendation-card strategy';
+                    icon.className = 'bi bi-check-circle-fill fs-1 text-success';
+                } else {
+                    card.className = 'recommendation-card cautious';
+                    icon.className = 'bi bi-exclamation-triangle-fill fs-1 text-warning';
+                }
+
+                // Populate details
+                details.innerHTML = '';
+                recommendation.details.forEach(detail => {
+                    const li = document.createElement('li');
+                    li.textContent = detail;
+                    details.appendChild(li);
+                });
+            }
+
+            updateComparisonTable(strategy, buyHold, comparison) {
+                const tbody = document.getElementById('comparisonTableBody');
+                tbody.innerHTML = '';
+
+                const metrics = [
+                    { name: 'Total Return', strategy: strategy.total_return, buyHold: buyHold.total_return, format: 'percentage' },
+                    { name: 'Annualized Return', strategy: strategy.annualized_return, buyHold: buyHold.annualized_return, format: 'percentage' },
+                    { name: 'Sharpe Ratio', strategy: strategy.sharpe_ratio, buyHold: buyHold.sharpe_ratio, format: 'number' },
+                    { name: 'Max Drawdown', strategy: strategy.max_drawdown, buyHold: buyHold.max_drawdown, format: 'percentage' },
+                    { name: 'Win Rate', strategy: strategy.win_rate, buyHold: 1, format: 'percentage' },
+                    { name: 'Total Trades', strategy: strategy.total_trades, buyHold: 1, format: 'number' }
+                ];
+
+                metrics.forEach(metric => {
+                    const row = document.createElement('tr');
+                    const difference = metric.strategy - metric.buyHold;
+                    
+                    row.innerHTML = `
+                        <td>${metric.name}</td>
+                        <td>${this.formatMetric(metric.strategy, metric.format)}</td>
+                        <td>${this.formatMetric(metric.buyHold, metric.format)}</td>
+                        <td class="${this.getColorClass(difference, metric.name === 'Max Drawdown')}">${this.formatMetric(difference, metric.format, true)}</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            updateTradesTable(trades) {
+                const tbody = document.getElementById('tradesTableBody');
+                tbody.innerHTML = '';
+
+                trades.forEach(trade => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${new Date(trade.entry_date).toLocaleDateString()}</td>
+                        <td>${new Date(trade.exit_date).toLocaleDateString()}</td>
+                        <td>$${trade.entry_price.toFixed(2)}</td>
+                        <td>$${trade.exit_price.toFixed(2)}</td>
+                        <td class="${this.getColorClass(trade.return_pct)}">${this.formatPercentage(trade.return_pct)}</td>
+                        <td>${trade.duration_days} days</td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+
+            formatMetric(value, format, showSign = false) {
+                if (format === 'percentage') {
+                    return (showSign && value > 0 ? '+' : '') + this.formatPercentage(value);
+                } else if (format === 'number') {
+                    return (showSign && value > 0 ? '+' : '') + value.toFixed(2);
+                }
+                return value.toString();
+            }
+
+            formatPercentage(value) {
+                return (value * 100).toFixed(1) + '%';
+            }
+
+            getColorClass(value, inverse = false) {
+                if (value > 0) {
+                    return inverse ? 'negative' : 'positive';
+                } else if (value < 0) {
+                    return inverse ? 'positive' : 'negative';
+                }
+                return 'neutral';
+            }
+
+            showLoading(show) {
+                document.getElementById('loadingSpinner').style.display = show ? 'block' : 'none';
+            }
+
+            showResults() {
+                document.getElementById('resultsSection').style.display = 'block';
+            }
+
+            hideResults() {
+                document.getElementById('resultsSection').style.display = 'none';
             }
         }
 
-        // Initialize feather icons
-        feather.replace();
+        // Initialize the app when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new BacktestingApp();
+        });
     </script>
 </body>
 </html>

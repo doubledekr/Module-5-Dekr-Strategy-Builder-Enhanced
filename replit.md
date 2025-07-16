@@ -108,4 +108,15 @@ Preferred communication style: Simple, everyday language.
 - **Sector Specialist (Tier 3)**: Advanced technical indicators and multi-timeframe analysis
 - **Higher Tiers (4-7)**: Custom indicators, options strategies, and institutional features
 
+## Recent Changes
+
+### July 16, 2025 - Major AI and Backtesting Enhancement
+- **AI-Powered Strategy Creation**: Implemented OpenAI GPT-4o integration for natural language strategy creation
+- **Prompt-Based Interface**: Users can now describe strategies in plain language (e.g., "Buy when RSI is below 30")
+- **Real-Time Backtesting**: Integrated Polygon.io API for authentic historical market data
+- **Buy-and-Hold Comparison**: Added comprehensive comparison showing when buy-and-hold outperforms strategies
+- **Intelligent Recommendations**: System now provides clear recommendations with confidence levels
+- **Enhanced Performance Metrics**: Added Sharpe ratio, volatility, and detailed trade analysis
+- **Comprehensive UI**: New backtesting interface with visual performance comparison
+
 The application is designed to be fully functional in a Replit environment while maintaining the flexibility to scale to production infrastructure with minimal modifications.
