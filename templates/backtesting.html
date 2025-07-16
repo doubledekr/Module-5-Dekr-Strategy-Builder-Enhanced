@@ -104,6 +104,51 @@
             </div>
         </div>
 
+        <!-- Strategy Selection -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            <i class="bi bi-robot"></i> Strategy Selection
+                        </h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="strategySelect" class="form-label">Choose Strategy</label>
+                                    <select class="form-select" id="strategySelect">
+                                        <option value="">Select a strategy...</option>
+                                        <option value="rsi_oversold">RSI Oversold Strategy</option>
+                                        <option value="macd_crossover">MACD Crossover Strategy</option>
+                                        <option value="bollinger_bands">Bollinger Bands Strategy</option>
+                                        <option value="moving_average">Moving Average Crossover</option>
+                                        <option value="momentum">Momentum Strategy</option>
+                                        <option value="custom">Create Custom Strategy</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="strategyDescription" class="form-label">Strategy Description</label>
+                                    <div class="form-control" id="strategyDescription" style="height: auto; min-height: 38px;">
+                                        Select a strategy to see description
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row" id="customStrategyRow" style="display: none;">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label for="customStrategyPrompt" class="form-label">Describe Your Strategy</label>
+                                    <textarea class="form-control" id="customStrategyPrompt" rows="3" placeholder="Example: Buy when RSI is below 30 and sell when it goes above 70"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Backtest Configuration -->
         <div class="row mb-4">
             <div class="col-12">
@@ -318,6 +363,49 @@
     <script>
         class BacktestingApp {
             constructor() {
+                this.strategies = {
+                    'rsi_oversold': {
+                        name: 'RSI Oversold Strategy',
+                        description: 'Buy when RSI falls below 30 (oversold) and sell when it rises above 70 (overbought).',
+                        config: {
+                            buy_conditions: [{ indicator: 'rsi', operator: '<', value: 30, parameters: { period: 14 } }],
+                            sell_conditions: [{ indicator: 'rsi', operator: '>', value: 70, parameters: { period: 14 } }]
+                        }
+                    },
+                    'macd_crossover': {
+                        name: 'MACD Crossover Strategy',
+                        description: 'Buy when MACD line crosses above signal line, sell when it crosses below.',
+                        config: {
+                            buy_conditions: [{ indicator: 'macd', operator: 'crosses_above', value: 'signal', parameters: { fast: 12, slow: 26, signal: 9 } }],
+                            sell_conditions: [{ indicator: 'macd', operator: 'crosses_below', value: 'signal', parameters: { fast: 12, slow: 26, signal: 9 } }]
+                        }
+                    },
+                    'bollinger_bands': {
+                        name: 'Bollinger Bands Strategy',
+                        description: 'Buy when price touches lower band, sell when it touches upper band.',
+                        config: {
+                            buy_conditions: [{ indicator: 'bollinger', operator: '<=', value: 'lower', parameters: { period: 20, std: 2 } }],
+                            sell_conditions: [{ indicator: 'bollinger', operator: '>=', value: 'upper', parameters: { period: 20, std: 2 } }]
+                        }
+                    },
+                    'moving_average': {
+                        name: 'Moving Average Crossover',
+                        description: 'Buy when short MA crosses above long MA, sell when it crosses below.',
+                        config: {
+                            buy_conditions: [{ indicator: 'sma', operator: 'crosses_above', value: 'sma_long', parameters: { short: 50, long: 200 } }],
+                            sell_conditions: [{ indicator: 'sma', operator: 'crosses_below', value: 'sma_long', parameters: { short: 50, long: 200 } }]
+                        }
+                    },
+                    'momentum': {
+                        name: 'Momentum Strategy',
+                        description: 'Buy on strong upward momentum, sell on downward momentum.',
+                        config: {
+                            buy_conditions: [{ indicator: 'rsi', operator: '>', value: 60, parameters: { period: 14 } }],
+                            sell_conditions: [{ indicator: 'rsi', operator: '<', value: 40, parameters: { period: 14 } }]
+                        }
+                    }
+                };
+                this.selectedStrategy = null;
                 this.init();
             }
 
@@ -328,6 +416,27 @@
 
             bindEvents() {
                 document.getElementById('runBacktestBtn').addEventListener('click', () => this.runBacktest());
+                document.getElementById('strategySelect').addEventListener('change', (e) => this.onStrategyChange(e));
+            }
+
+            onStrategyChange(e) {
+                const strategyId = e.target.value;
+                const description = document.getElementById('strategyDescription');
+                const customRow = document.getElementById('customStrategyRow');
+                
+                if (strategyId === 'custom') {
+                    description.textContent = 'Describe your trading strategy in plain language and AI will convert it to actionable rules.';
+                    customRow.style.display = 'block';
+                    this.selectedStrategy = null;
+                } else if (strategyId && this.strategies[strategyId]) {
+                    description.textContent = this.strategies[strategyId].description;
+                    customRow.style.display = 'none';
+                    this.selectedStrategy = this.strategies[strategyId];
+                } else {
+                    description.textContent = 'Select a strategy to see description';
+                    customRow.style.display = 'none';
+                    this.selectedStrategy = null;
+                }
             }
 
             loadTestStrategy() {
@@ -345,9 +454,15 @@
                 const symbol = document.getElementById('symbolInput').value.toUpperCase();
                 const startDate = document.getElementById('startDate').value;
                 const endDate = document.getElementById('endDate').value;
+                const strategySelect = document.getElementById('strategySelect').value;
 
                 if (!symbol || !startDate || !endDate) {
                     alert('Please fill in all fields');
+                    return;
+                }
+
+                if (!strategySelect) {
+                    alert('Please select a strategy to test');
                     return;
                 }
 
@@ -355,6 +470,38 @@
                 this.hideResults();
 
                 try {
+                    let strategyConfig = null;
+                    
+                    if (strategySelect === 'custom') {
+                        const customPrompt = document.getElementById('customStrategyPrompt').value;
+                        if (!customPrompt.trim()) {
+                            alert('Please describe your custom strategy');
+                            this.showLoading(false);
+                            return;
+                        }
+                        
+                        // Parse custom strategy using AI
+                        const parseResponse = await fetch('/api/ai/parse-strategy', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                description: customPrompt,
+                                user_id: 1
+                            })
+                        });
+                        
+                        const parseResult = await parseResponse.json();
+                        if (parseResponse.ok) {
+                            strategyConfig = parseResult;
+                        } else {
+                            throw new Error('Failed to parse custom strategy: ' + parseResult.error);
+                        }
+                    } else {
+                        strategyConfig = this.strategies[strategySelect].config;
+                    }
+
                     const response = await fetch(`/api/strategies/test/backtest`, {
                         method: 'POST',
                         headers: {
@@ -363,7 +510,8 @@
                         body: JSON.stringify({
                             symbol: symbol,
                             start_date: startDate,
-                            end_date: endDate
+                            end_date: endDate,
+                            strategy_config: strategyConfig
                         })
                     });
 

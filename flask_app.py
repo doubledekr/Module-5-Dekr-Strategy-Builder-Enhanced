@@ -182,6 +182,8 @@ def get_signal_stats():
         logger.error(f"Error fetching signal stats: {e}")
         return jsonify({"error": "Failed to fetch signal stats"}), 500
 
+
+
 @app.route('/api/strategies/<strategy_id>/backtest', methods=['POST'])
 def run_backtest(strategy_id):
     """Run backtest for strategy with buy-and-hold comparison"""
@@ -190,22 +192,41 @@ def run_backtest(strategy_id):
         symbol = data.get('symbol', 'AAPL')
         start_date = data.get('start_date', '2023-01-01')
         end_date = data.get('end_date', '2024-01-01')
+        strategy_config = data.get('strategy_config', {})
         
         # Parse dates
         from datetime import datetime
         start_dt = datetime.strptime(start_date, '%Y-%m-%d')
         end_dt = datetime.strptime(end_date, '%Y-%m-%d')
         
-        # Create a mock strategy for testing (replace with actual strategy retrieval)
+        # Create strategy from config or use default RSI strategy
         from models import Strategy, StrategyCondition
-        strategy = Strategy(
-            id=strategy_id,
-            user_id=1,
-            name="Test Strategy",
-            description="Test strategy for backtesting",
-            strategy_type="technical",
-            symbols=[symbol],
-            buy_conditions=[
+        
+        if strategy_config and 'buy_conditions' in strategy_config:
+            buy_conditions = [
+                StrategyCondition(
+                    indicator=cond.get('indicator', 'rsi'),
+                    operator=cond.get('operator', '<'),
+                    value=cond.get('value', 30),
+                    timeframe=cond.get('timeframe', '1d'),
+                    parameters=cond.get('parameters', {})
+                )
+                for cond in strategy_config['buy_conditions']
+            ]
+            
+            sell_conditions = [
+                StrategyCondition(
+                    indicator=cond.get('indicator', 'rsi'),
+                    operator=cond.get('operator', '>'),
+                    value=cond.get('value', 70),
+                    timeframe=cond.get('timeframe', '1d'),
+                    parameters=cond.get('parameters', {})
+                )
+                for cond in strategy_config['sell_conditions']
+            ]
+        else:
+            # Default RSI strategy
+            buy_conditions = [
                 StrategyCondition(
                     indicator="rsi",
                     operator="<",
@@ -213,8 +234,9 @@ def run_backtest(strategy_id):
                     timeframe="1d",
                     parameters={"period": 14}
                 )
-            ],
-            sell_conditions=[
+            ]
+            
+            sell_conditions = [
                 StrategyCondition(
                     indicator="rsi",
                     operator=">",
@@ -222,7 +244,17 @@ def run_backtest(strategy_id):
                     timeframe="1d",
                     parameters={"period": 14}
                 )
-            ],
+            ]
+        
+        strategy = Strategy(
+            id=strategy_id,
+            user_id=1,
+            name=strategy_config.get('name', 'Test Strategy'),
+            description=strategy_config.get('description', 'Test strategy for backtesting'),
+            strategy_type="technical",
+            symbols=[symbol],
+            buy_conditions=buy_conditions,
+            sell_conditions=sell_conditions,
             risk_management={
                 "stop_loss": 0.02,
                 "take_profit": 0.06,
@@ -269,7 +301,7 @@ def get_strategy_examples():
         return jsonify({"error": "Failed to fetch strategy examples"}), 500
 
 @app.route('/api/ai/parse-strategy', methods=['POST'])
-def parse_strategy():
+def ai_parse_strategy():
     """Parse natural language strategy description"""
     try:
         data = request.get_json()
