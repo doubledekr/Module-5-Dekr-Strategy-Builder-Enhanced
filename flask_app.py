@@ -82,45 +82,181 @@ def get_strategies():
         user_id = request.args.get('user_id', 1, type=int)
         limit = request.args.get('limit', 50, type=int)
         
-        # Mock data for now - will be replaced with actual database calls
-        strategies = [
-            {
-                "id": "1",
-                "name": "Sample RSI Strategy",
-                "description": "A sample RSI-based trading strategy",
-                "strategy_type": "technical",
-                "symbols": ["AAPL", "GOOGL"],
-                "is_active": True,
-                "created_at": datetime.now().isoformat()
-            },
-            {
-                "id": "2",
-                "name": "Moving Average Strategy",
-                "description": "Simple moving average crossover strategy",
-                "strategy_type": "technical",
-                "symbols": ["MSFT", "TSLA"],
-                "is_active": False,
-                "created_at": datetime.now().isoformat()
+        # Get strategies from database
+        import sqlite3
+        import json
+        
+        conn = sqlite3.connect('dekr_strategy_builder.db')
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id, user_id, name, description, strategy_type, symbols, 
+                   buy_conditions, sell_conditions, risk_management, tier_required,
+                   is_active, created_at, updated_at
+            FROM strategies 
+            WHERE user_id = ? 
+            ORDER BY created_at DESC 
+            LIMIT ?
+        """, (user_id, limit))
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        strategies = []
+        for row in rows:
+            strategy = {
+                "id": row[0],
+                "user_id": row[1],
+                "name": row[2],
+                "description": row[3],
+                "strategy_type": row[4],
+                "symbols": json.loads(row[5]) if row[5] else [],
+                "buy_conditions": json.loads(row[6]) if row[6] else [],
+                "sell_conditions": json.loads(row[7]) if row[7] else [],
+                "risk_management": json.loads(row[8]) if row[8] else {},
+                "tier_required": row[9],
+                "is_active": bool(row[10]),
+                "created_at": row[11],
+                "updated_at": row[12]
             }
-        ]
+            strategies.append(strategy)
+        
         return jsonify({"strategies": strategies})
     except Exception as e:
         logger.error(f"Error fetching strategies: {e}")
         return jsonify({"error": "Failed to fetch strategies"}), 500
+
+@app.route('/api/strategies/<strategy_id>')
+def get_strategy(strategy_id):
+    """Get a specific strategy by ID"""
+    try:
+        import sqlite3
+        import json
+        
+        conn = sqlite3.connect('dekr_strategy_builder.db')
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id, user_id, name, description, strategy_type, symbols, 
+                   buy_conditions, sell_conditions, risk_management, tier_required,
+                   is_active, created_at, updated_at
+            FROM strategies 
+            WHERE id = ?
+        """, (strategy_id,))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        if not row:
+            return jsonify({"error": "Strategy not found"}), 404
+        
+        strategy = {
+            "id": row[0],
+            "user_id": row[1],
+            "name": row[2],
+            "description": row[3],
+            "strategy_type": row[4],
+            "symbols": json.loads(row[5]) if row[5] else [],
+            "buy_conditions": json.loads(row[6]) if row[6] else [],
+            "sell_conditions": json.loads(row[7]) if row[7] else [],
+            "risk_management": json.loads(row[8]) if row[8] else {},
+            "tier_required": row[9],
+            "is_active": bool(row[10]),
+            "created_at": row[11],
+            "updated_at": row[12]
+        }
+        
+        return jsonify({"strategy": strategy})
+    except Exception as e:
+        logger.error(f"Error fetching strategy: {e}")
+        return jsonify({"error": "Failed to fetch strategy"}), 500
 
 @app.route('/api/strategies', methods=['POST'])
 def create_strategy():
     """Create new strategy endpoint"""
     try:
         data = request.get_json()
-        # TODO: Implement actual strategy creation
+        
+        # Create strategy using AI strategy builder
+        from services.ai_strategy_builder import AIStrategyBuilder
+        ai_builder = AIStrategyBuilder()
+        
+        if 'description' in data:
+            # Natural language strategy creation
+            strategy_data = asyncio.run(ai_builder.parse_strategy_description(
+                data['description'], 
+                data.get('user_id', 1)
+            ))
+        else:
+            # Direct strategy creation
+            strategy_data = data
+            strategy_data['user_id'] = data.get('user_id', 1)
+            strategy_data['id'] = f"strategy_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            strategy_data['created_at'] = datetime.now().isoformat()
+            strategy_data['updated_at'] = datetime.now().isoformat()
+            strategy_data['is_active'] = True
+        
+        # Save to database
+        from models import Strategy, StrategyCondition
+        import json
+        import uuid
+        
+        strategy = Strategy(
+            id=strategy_data['id'],
+            user_id=strategy_data['user_id'],
+            name=strategy_data['name'],
+            description=strategy_data.get('description', ''),
+            strategy_type=strategy_data['strategy_type'],
+            symbols=strategy_data['symbols'],
+            buy_conditions=[StrategyCondition.from_dict(c) for c in strategy_data['buy_conditions']],
+            sell_conditions=[StrategyCondition.from_dict(c) for c in strategy_data['sell_conditions']],
+            risk_management=strategy_data.get('risk_management', {"stop_loss": 0.05, "take_profit": 0.10}),
+            tier_required=strategy_data.get('tier_required', 1),
+            is_active=strategy_data.get('is_active', True),
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        
+        # Save to SQLite database
+        query = """
+            INSERT INTO strategies (id, user_id, name, description, strategy_type, symbols,
+                                  buy_conditions, sell_conditions, risk_management, tier_required,
+                                  is_active, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """
+        
+        params = (
+            strategy.id,
+            strategy.user_id,
+            strategy.name,
+            strategy.description,
+            strategy.strategy_type,
+            json.dumps(strategy.symbols),
+            json.dumps([c.to_dict() for c in strategy.buy_conditions]),
+            json.dumps([c.to_dict() for c in strategy.sell_conditions]),
+            json.dumps(strategy.risk_management),
+            strategy.tier_required,
+            strategy.is_active,
+            strategy.created_at.isoformat(),
+            strategy.updated_at.isoformat()
+        )
+        
+        # Execute database write
+        import sqlite3
+        conn = sqlite3.connect('dekr_strategy_builder.db')
+        cursor = conn.cursor()
+        cursor.execute(query, params)
+        conn.commit()
+        conn.close()
+        
         return jsonify({
-            "id": "new-strategy-id",
-            "message": "Strategy created successfully"
+            "strategy": strategy.to_dict(),
+            "message": "Strategy created and saved successfully"
         })
+        
     except Exception as e:
         logger.error(f"Error creating strategy: {e}")
-        return jsonify({"error": "Failed to create strategy"}), 500
+        return jsonify({"error": f"Failed to create strategy: {str(e)}"}), 500
 
 @app.route('/api/signals/')
 def get_signals():

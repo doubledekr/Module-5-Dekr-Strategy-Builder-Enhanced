@@ -110,8 +110,9 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### July 16, 2025 - Complete Technical Analysis System
+### July 16, 2025 - Complete Technical Analysis System with Strategy Persistence
 - **AI-Powered Strategy Creation**: Implemented OpenAI GPT-4o integration for natural language strategy creation
+- **Strategy Persistence**: Custom strategies are now saved to database and can be retrieved for backtesting
 - **Comprehensive Technical Analysis**: Full indicator support including RSI, MACD, Bollinger Bands, SMA/EMA, Stochastic, Volume
 - **Authentic Market Data**: Polygon.io integration provides unlimited access to real OHLCV data
 - **All Strategy Types Working**: RSI, MACD, Bollinger Bands, Momentum, and Moving Average strategies all generate trades
@@ -119,6 +120,8 @@ Preferred communication style: Simple, everyday language.
 - **Frontend Trade Display**: Users can see individual trade details with entry/exit dates, prices, and returns
 - **Technical Analysis Fixes**: Added support for all indicator value types (signal, bb_upper, bb_lower, sma_20, etc.)
 - **Comprehensive Backtesting**: System generates authentic performance metrics from real market data
+- **Sharpe Ratio Correction**: Fixed inflated Sharpe ratios by converting trade returns to approximate daily returns
+- **Bollinger Bands Strategy**: Working correctly with realistic trade frequency (few trades due to statistical rarity)
 - **Debug Console**: Added console logging to help users troubleshoot strategy performance
 
 The application is designed to be fully functional in a Replit environment while maintaining the flexibility to scale to production infrastructure with minimal modifications.
