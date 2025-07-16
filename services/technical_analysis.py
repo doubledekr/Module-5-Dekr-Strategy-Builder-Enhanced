@@ -121,8 +121,8 @@ class TechnicalAnalysisEngine:
             value = condition['value']
             parameters = condition.get('parameters', {})
             
-            # Calculate indicator if not already present
-            if indicator not in df.columns:
+            # Calculate indicator if not already present (skip for basic price data)
+            if indicator not in df.columns and indicator not in ['price', 'close', 'open', 'high', 'low', 'volume']:
                 df = self.calculate_indicators(df, [indicator])
             
             # Handle different indicator types
@@ -142,6 +142,10 @@ class TechnicalAnalysisEngine:
             elif indicator == "stochastic":
                 line = parameters.get('line', 'k')
                 column = f'stoch_{line}'
+            elif indicator == "volume":
+                column = 'volume'
+            elif indicator == "price":
+                column = 'close'  # Price refers to closing price
             else:
                 column = indicator
             
@@ -149,26 +153,75 @@ class TechnicalAnalysisEngine:
                 logger.warning(f"Column {column} not found in dataframe")
                 return pd.Series([False] * len(df), index=df.index)
             
+            # Handle special value types
+            comparison_series = None
+            if isinstance(value, str):
+                if value == "average_volume":
+                    # Calculate 20-period average volume for each row
+                    if 'volume' in df.columns:
+                        comparison_series = df['volume'].rolling(window=20).mean()
+                    else:
+                        logger.warning("Volume column not found for average_volume comparison")
+                        return pd.Series([False] * len(df), index=df.index)
+                elif value == "close_price":
+                    value = df['close'].iloc[-1]
+                elif value == "sma_20" or value == "sma":
+                    if 'sma_20' not in df.columns:
+                        df = self.calculate_indicators(df, ['sma'])
+                    comparison_series = df['sma_20'] if 'sma_20' in df.columns else df['close']
+                elif value == "sma_50":
+                    if 'sma_50' not in df.columns:
+                        df = self.calculate_indicators(df, ['sma'])
+                    comparison_series = df['sma_50'] if 'sma_50' in df.columns else df['close']
+                else:
+                    # Try to convert string to float
+                    try:
+                        value = float(value)
+                    except ValueError:
+                        logger.warning(f"Cannot convert value '{value}' to numeric")
+                        return pd.Series([False] * len(df), index=df.index)
+            
             # Evaluate condition
             series = df[column]
             
-            if operator == ">":
-                return series > value
-            elif operator == "<":
-                return series < value
-            elif operator == ">=":
-                return series >= value
-            elif operator == "<=":
-                return series <= value
-            elif operator == "==":
-                return series == value
-            elif operator == "crosses_above":
-                return (series > value) & (series.shift(1) <= value)
-            elif operator == "crosses_below":
-                return (series < value) & (series.shift(1) >= value)
+            # Handle comparisons with dynamic series (like average_volume)
+            if comparison_series is not None:
+                if operator == ">":
+                    return series > comparison_series
+                elif operator == "<":
+                    return series < comparison_series
+                elif operator == ">=":
+                    return series >= comparison_series
+                elif operator == "<=":
+                    return series <= comparison_series
+                elif operator == "==":
+                    return series == comparison_series
+                elif operator == "crosses_above":
+                    return (series > comparison_series) & (series.shift(1) <= comparison_series.shift(1))
+                elif operator == "crosses_below":
+                    return (series < comparison_series) & (series.shift(1) >= comparison_series.shift(1))
+                else:
+                    logger.warning(f"Unknown operator: {operator}")
+                    return pd.Series([False] * len(df), index=df.index)
             else:
-                logger.warning(f"Unknown operator: {operator}")
-                return pd.Series([False] * len(df), index=df.index)
+                # Regular numeric comparisons
+                if operator == ">":
+                    return series > value
+                elif operator == "<":
+                    return series < value
+                elif operator == ">=":
+                    return series >= value
+                elif operator == "<=":
+                    return series <= value
+                elif operator == "==":
+                    return series == value
+                elif operator == "crosses_above":
+                    return (series > value) & (series.shift(1) <= value)
+                elif operator == "crosses_below":
+                    return (series < value) & (series.shift(1) >= value)
+                else:
+                    logger.warning(f"Unknown operator: {operator}")
+                    return pd.Series([False] * len(df), index=df.index)
                 
         except Exception as e:
             logger.error(f"Error evaluating condition: {str(e)}")
