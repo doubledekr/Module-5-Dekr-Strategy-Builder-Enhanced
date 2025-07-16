@@ -173,6 +173,14 @@ class TechnicalAnalysisEngine:
                     if 'sma_50' not in df.columns:
                         df = self.calculate_indicators(df, ['sma'])
                     comparison_series = df['sma_50'] if 'sma_50' in df.columns else df['close']
+                elif value == "sma_long" or value == "sma_200":
+                    if 'sma_200' not in df.columns:
+                        df = self.calculate_indicators(df, ['sma'])
+                    comparison_series = df['sma_200'] if 'sma_200' in df.columns else df['close']
+                elif value == "sma_short" or value == "sma_10":
+                    if 'sma_10' not in df.columns:
+                        df = self.calculate_indicators(df, ['sma'])
+                    comparison_series = df['sma_10'] if 'sma_10' in df.columns else df['close']
                 elif value == "signal" or value == "macd_signal" or value == "signal_line":
                     # Handle MACD signal line comparison
                     if 'macd_signal' not in df.columns:

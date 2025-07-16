@@ -531,10 +531,15 @@
             }
 
             displayResults(result) {
+                console.log('Full result:', result);
+                
                 const strategy = result.strategy_performance;
                 const buyHold = result.buy_hold_performance;
                 const comparison = result.comparison;
                 const recommendation = result.recommendation;
+
+                console.log('Strategy performance:', strategy);
+                console.log('Strategy trades:', strategy.trades);
 
                 // Update performance metrics
                 this.updatePerformanceMetrics(strategy, buyHold);
@@ -637,6 +642,18 @@
             updateTradesTable(trades) {
                 const tbody = document.getElementById('tradesTableBody');
                 tbody.innerHTML = '';
+
+                console.log('Updating trades table with', trades.length, 'trades');
+                console.log('Trades data:', trades);
+
+                if (!trades || trades.length === 0) {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td colspan="6" class="text-center text-muted">No trades executed for this strategy</td>
+                    `;
+                    tbody.appendChild(row);
+                    return;
+                }
 
                 trades.forEach(trade => {
                     const row = document.createElement('tr');
